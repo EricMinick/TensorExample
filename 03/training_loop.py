@@ -1,5 +1,6 @@
 import os
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
@@ -54,25 +55,25 @@ with tf.variable_scope('input'):
 
 # Layer 1
 with tf.variable_scope('layer_1'):
-    weights = tf.get_variable("weights1", shape=[number_of_inputs, layer_1_nodes], initializer=tf.contrib.layers.xavier_initializer())
+    weights = tf.get_variable("weights1", shape=[number_of_inputs, layer_1_nodes], initializer=tf.initializers.glorot_uniform())
     biases = tf.get_variable(name="biases1", shape=[layer_1_nodes], initializer=tf.zeros_initializer())
     layer_1_output = tf.nn.relu(tf.matmul(X, weights) + biases)
 
 # Layer 2
 with tf.variable_scope('layer_2'):
-    weights = tf.get_variable("weights2", shape=[layer_1_nodes, layer_2_nodes], initializer=tf.contrib.layers.xavier_initializer())
+    weights = tf.get_variable("weights2", shape=[layer_1_nodes, layer_2_nodes], initializer=tf.initializers.glorot_uniform())
     biases = tf.get_variable(name="biases2", shape=[layer_2_nodes], initializer=tf.zeros_initializer())
     layer_2_output = tf.nn.relu(tf.matmul(layer_1_output, weights) + biases)
 
 # Layer 3
 with tf.variable_scope('layer_3'):
-    weights = tf.get_variable("weights3", shape=[layer_2_nodes, layer_3_nodes], initializer=tf.contrib.layers.xavier_initializer())
+    weights = tf.get_variable("weights3", shape=[layer_2_nodes, layer_3_nodes], initializer=tf.initializers.glorot_uniform())
     biases = tf.get_variable(name="biases3", shape=[layer_3_nodes], initializer=tf.zeros_initializer())
     layer_3_output = tf.nn.relu(tf.matmul(layer_2_output, weights) + biases)
 
 # Output Layer
 with tf.variable_scope('output'):
-    weights = tf.get_variable("weights4", shape=[layer_3_nodes, number_of_outputs], initializer=tf.contrib.layers.xavier_initializer())
+    weights = tf.get_variable("weights4", shape=[layer_3_nodes, number_of_outputs], initializer=tf.initializers.glorot_uniform())
     biases = tf.get_variable(name="biases4", shape=[number_of_outputs], initializer=tf.zeros_initializer())
     prediction = tf.matmul(layer_3_output, weights) + biases
 
@@ -91,17 +92,25 @@ with tf.variable_scope('train'):
 with tf.Session() as session:
 
     # Run the global variable initializer to initialize all variables and layers of the neural network
-
+    session.run(tf.global_variables_initializer())
 
     # Run the optimizer over and over to train the network.
     # One epoch is one full run through the training data set.
     for epoch in range(training_epochs):
 
         # Feed in the training data and do one step of neural network training
+        session.run(optimizer, feed_dict={X: X_scaled_training, Y: Y_scaled_training})
 
-
-        # Print the current training status to the screen
-        print("Training pass: {}".format(epoch))
+        # Every 5 training steps, log our progress
+        if epoch % 5 == 0:
+            training_cost = session.run(cost, feed_dict={X: X_scaled_training, Y: Y_scaled_training})
+            testing_cost = session.run(cost, feed_dict={X: X_scaled_testing, Y: Y_scaled_testing})
+            print(epoch, training_cost, testing_cost)
 
     # Training is now complete!
     print("Training is complete!")
+    final_training_cost = session.run(cost, feed_dict={X: X_scaled_training, Y: Y_scaled_training})
+    final_testing_cost = session.run(cost, feed_dict={X: X_scaled_testing, Y: Y_scaled_testing})
+
+    print("Final Training cost: {}".format(final_training_cost))
+    print("Final Testing cost: {}".format(final_testing_cost))
